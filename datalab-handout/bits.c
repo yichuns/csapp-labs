@@ -403,49 +403,79 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  int tmin, sign, count, t, exp, frac, saved;
+  /* this will store the final result to be returned */
+  unsigned res = 0;
+  unsigned count = 0;
+  unsigned exp, frac, E;
+  unsigned i = x;
+  unsigned low, high, mask, step;
 
   if (x == 0)
       return 0;
 
-  tmin = 1 << 31;
-  /* E = e - 127, so E = 158*/
-  if (x == tmin)
-      return tmin | (158 << 23);
-
-  sign = 0;
-  t = x;
   if (x < 0)
   {
-      sign = 1;
-      t = -x;
+      /* x maybe INT_MIN, in this case, i = 2^31 */
+      i = -x;
+      /* set the sign bit */
+      res = 0x80000000;
   }
 
-  count = 1;
-  saved = t;
-  while (((t << 1) & tmin) == 0) 
+  /* find the most siginificant bit in i */
+  while ((i & 0x80000000) == 0) 
   {
-    count = count + 1;
-    t = t << 1;
+    ++count;
+    i = i << 1;
   }
 
-  /*
-  printf("count is %d\n", count);
-  printf("x is 0x%x\n", x);
-  */
+  /* shift the MSB out */
+  i = i << 1;
+  /* after this, 32 - count is E */
+  ++count;
+  E = 32 - count;
+  exp = E + 127;
+  frac = i >> 9;
 
-  /* if (32 - count - 1 >= 23) */
-  if (8 - count >= 0)
-      frac = saved >> (8 - count);
+  /* will the value be fit into frac part? */
+  if (E < 24)
+  {
+    return res | (exp << 23) | frac;
+  }
+  else
+  {
+    /* step is 2^E * 2^(-23), align the value to step  */
+    step = 1 << (E - 23);
+    mask = ~(step - 1);
+    /* shfit i back */
+    i = i >> count;
+    low = i & mask;
+    high = low + step;
 
-  if (8 - count < 0)
-      frac = saved << (count - 8);
-  
-  frac = ~(tmin >> 8) & frac;
+    /* printf("i = 0x%x, low = 0x%x, high = 0x%x\n", i, low, high); */
 
-  /* 32 - count - 1 + 127 */
-  exp = (158 - count) << 23;
-  return ((sign << 31) | exp | frac);
+    if (high - i > i - low)
+        frac = low;
+    else if (high - i < i - low)
+        frac = high;
+    else
+    {
+        /* the value is in the middle, round to even */
+        /* see if low % (2*step) is 0 */
+        if ((low & ((step << 1) - 1)) == 0)
+            frac = low;
+        else
+            frac = high;
+    }
+
+    /* if frac part of low are all 1s and need to round to high */
+    if ((((low >> (E - 23)) & 0x7fffff) == 0x7fffff) && (frac == high))
+        exp++;
+
+    /*printf("step = 0x%x, mask = 0x%x, high = 0x%x\n", step, mask);*/
+
+    frac = (frac >> (E - 23)) & 0x7fffff;
+    return res | (exp << 23) | frac;
+  }
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
