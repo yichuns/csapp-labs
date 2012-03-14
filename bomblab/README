@@ -1,0 +1,5 @@
+1. bomb is the binary bomb I got from CSAPP's student site
+2. bomb.s is the disassemble file of bomb (objdump -d bomb > bomb.s)
+3. bomb.t is the symbol tale of bomb (objdump -t bomb > bomb.t)
+4. bomb_solutions.txt contains my solutions for each phase, one phase per line
+5. bomb_summary.txt is my notes on how I defused each of the bombs
