@@ -73,3 +73,8 @@ take use of the high order 4 bits to get printable chars.
 
 
 Phase 6
+1. First, in phase_6, it checks if there are 6 ints inputed (and they must be 1-6 respectively, 0x8048db3 ~ 0x8048e00)
+2. Second, it checks a 6 elements linked list whose addresses are stored at -0x34(%ebp) (saw from 0x804be67), if it's not sorted in descending order, explode_bomb will be called 
+3. From this, we can guess all the previous operations before the check in the second step are about the sorting, and it depends on the correct input.
+4. Before sorting, the address of the first element is stored at -0x34(%ebp), its value is 0x804b26c. Following from there, the list is:
+0x804b26c -> 0x804b260 -> 0x804b254 -> 0x804b248 -> 0x804b23c -> 0x804b230
